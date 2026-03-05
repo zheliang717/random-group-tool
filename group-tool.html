@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <title>分组手 · 均衡随机分组（Excel导入/导出）</title>
+    <!-- 引入 SheetJS 用于解析和生成 Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #f4f7fb;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+        }
+
+        .card {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px -12px rgba(0, 10, 30, 0.25), 0 8px 24px -6px rgba(0, 0, 0, 0.1);
+            padding: 32px 28px;
+            transition: all 0.2s ease;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #1f2b3c, #2c3e50);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sub {
+            color: #4b5e77;
+            margin-bottom: 28px;
+            font-size: 1rem;
+            border-left: 4px solid #8aa9d6;
+            padding-left: 18px;
+            background: #f0f4fe;
+            border-radius: 0 40px 40px 0;
+            line-height: 1.4;
+            font-weight: 400;
+        }
+
+        .input-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 24px;
+            background: #f9fcff;
+            padding: 24px 20px;
+            border-radius: 24px;
+            border: 1px solid #e2eaf2;
+        }
+
+        .input-group {
+            flex: 1 1 180px;
+            min-width: 160px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #3b4f66;
+            margin-bottom: 6px;
+        }
+
+        .input-group input[type="number"] {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #dbe4ed;
+            border-radius: 18px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            background: white;
+            transition: 0.15s;
+            outline: none;
+            color: #1a2632;
+        }
+
+        .input-group input[type="number"]:focus {
+            border-color: #4f7aa6;
+            box-shadow: 0 0 0 3px rgba(79, 122, 166, 0.2);
+        }
+
+        .input-full {
+            flex: 2 1 100%;
+            margin-top: 8px;
+        }
+
+        .input-full label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-full textarea {
+            width: 100%;
+            padding: 16px 18px;
+            border: 2px solid #dbe4ed;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            background: white;
+            transition: 0.15s;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .input-full textarea:focus {
+            border-color: #4f7aa6;
+            box-shadow: 0 0 0 3px rgba(79, 122, 166, 0.2);
+        }
+
+        .hint {
+            font-size: 0.8rem;
+            color: #5f748b;
+            margin-top: 6px;
+            margin-left: 6px;
+        }
+
+        /* Excel 导入区域 */
+        .excel-import-area {
+            background: #eef4fa;
+            border-radius: 20px;
+            padding: 18px 20px;
+            margin-top: 16px;
+            border: 1px dashed #7fa1c3;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .file-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex: 2 1 300px;
+        }
+
+        .file-label {
+            background: #2c3e50;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #1f3243;
+        }
+
+        .file-label:hover {
+            background: #1f3243;
+        }
+
+        .file-label input {
+            position: absolute;
+            opacity: 0;
+            width: 0.1px;
+            height: 0.1px;
+        }
+
+        .file-name {
+            color: #1d3e5e;
+            font-size: 0.9rem;
+            background: white;
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: 1px solid #b9cee8;
+            max-width: 260px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .import-options {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #1e3a5f;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #2c5a8c;
+            cursor: pointer;
+        }
+
+        .import-btn {
+            background: white;
+            border: 2px solid #2c5a8c;
+            color: #2c5a8c;
+            font-weight: 600;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.1s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .import-btn:hover {
+            background: #e3efff;
+        }
+
+        .import-status {
+            margin-left: auto;
+            color: #2f6b3e;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: #e0f0e6;
+            padding: 6px 18px;
+            border-radius: 40px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            margin: 12px 0 24px 0;
+        }
+
+        .btn-primary {
+            background: #1f2f40;
+            color: white;
+            border: none;
+            padding: 16px 38px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 8px 18px -6px #1f2f4060;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #314b63;
+        }
+
+        .btn-primary:hover {
+            background: #253b50;
+            transform: scale(1.01);
+            box-shadow: 0 12px 24px -8px #0f1e2e;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* 新增导出按钮样式 (次级按钮) */
+        .btn-secondary {
+            background: white;
+            color: #1f2f40;
+            border: 2px solid #b0c8e0;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-secondary:hover {
+            background: #e7f0fa;
+            border-color: #7f9fc7;
+        }
+
+        .stats-badge {
+            background: #e3ecf5;
+            border-radius: 40px;
+            padding: 8px 22px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1f3348;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .stats-badge span {
+            background: white;
+            border-radius: 30px;
+            padding: 4px 14px;
+            font-weight: 600;
+            color: #1d3b5c;
+        }
+
+        #errorMsg {
+            background: #ffe8e6;
+            color: #b13e3e;
+            padding: 12px 24px;
+            border-radius: 60px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin: 8px 0 18px 0;
+            border-left: 6px solid #c76767;
+            display: inline-block;
+            width: auto;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 22px;
+            margin-top: 28px;
+        }
+
+        .group-card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px 16px 16px 16px;
+            box-shadow: 0 6px 16px rgba(0, 20, 40, 0.08);
+            border: 1px solid #eaf0f6;
+            transition: 0.1s ease;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(2px);
+        }
+
+        .group-card:hover {
+            border-color: #b6cde0;
+            box-shadow: 0 12px 22px -8px rgba(28, 60, 100, 0.18);
+        }
+
+        .group-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            border-bottom: 2px dashed #c9ddec;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+
+        .group-title {
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: #1f3c5a;
+            letter-spacing: -0.3px;
+        }
+
+        .group-count {
+            background: #d6e5f5;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1d3d5e;
+        }
+
+        .member-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: #b4c8dc #ecf3fa;
+        }
+
+        .member-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .member-list::-webkit-scrollbar-track {
+            background: #ecf3fa;
+            border-radius: 10px;
+        }
+
+        .member-list::-webkit-scrollbar-thumb {
+            background: #b4c8dc;
+            border-radius: 10px;
+        }
+
+        .member-badge {
+            background: #f0f6ff;
+            border: 1px solid #d2e2f2;
+            color: #1f3f5c;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: 0.1s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        .member-badge:hover {
+            background: #e1edfd;
+            border-color: #91b6da;
+        }
+
+        .empty-groups-note {
+            color: #8199b2;
+            font-style: italic;
+            padding: 30px;
+            text-align: center;
+            background: #f3f9ff;
+            border-radius: 48px;
+            font-size: 1.1rem;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #8ba0b8;
+            font-size: 0.8rem;
+            border-top: 1px solid #deeaf3;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🎲 分组手 · 均衡随机组</h1>
+    <div class="sub">自定义组数 · 智能平均分配 · 支持手动输入 / Excel导入 / 结果导出</div>
+
+    <div class="input-panel">
+        <div class="input-group">
+            <label>🔢 总人数 (数字)</label>
+            <input type="number" id="totalPeople" min="1" value="20" step="1" placeholder="例: 20">
+            <div class="hint">未填写姓名列表时生效</div>
+        </div>
+        <div class="input-group">
+            <label>🗂️ 分组数</label>
+            <input type="number" id="groupCount" min="1" value="4" step="1" placeholder="例: 4">
+            <div class="hint">至少1组，不超过总人数</div>
+        </div>
+        <div class="input-full">
+            <label>📋 姓名列表 (每行一个，可手动编辑)</label>
+            <textarea id="nameList" placeholder="张小明&#10;李一诺&#10;王思睿&#10;赵小雅&#10;陈思远&#10;刘念&#10;周晴朗&#10;欧阳雪&#10;……">张小明
+李一诺
+王思睿
+赵小雅
+陈思远
+刘念
+周晴朗
+欧阳雪
+林笑笑
+郭靖
+黄蓉
+杨过
+小龙女
+韦小宝
+乔峰
+段誉
+虚竹
+令狐冲
+张三丰</textarea>
+            <div class="hint">✏️ 若此处有内容，自动忽略上方人数数字，按姓名分组</div>
+        </div>
+
+        <!-- Excel导入区域 (不变) -->
+        <div class="excel-import-area">
+            <div class="file-input-wrap">
+                <label class="file-label">
+                    📂 选择 Excel 文件
+                    <input type="file" id="excelFile" accept=".xlsx, .xls, .csv, .xlsm">
+                </label>
+                <span class="file-name" id="fileNameDisplay">未选择文件</span>
+            </div>
+            <div class="import-options">
+                <label class="checkbox-item">
+                    <input type="checkbox" id="headerCheckbox" checked> 第一行为标题
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="appendCheckbox"> 追加到现有列表
+                </label>
+                <button class="import-btn" id="importExcelBtn">⬇️ 导入姓名</button>
+            </div>
+            <span class="import-status" id="importStatus"></span>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button class="btn-primary" id="shuffleBtn">⟳ 随机均衡分组</button>
+        <!-- 新增：导出结果按钮 -->
+        <button class="btn-secondary" id="exportBtn">📥 导出结果为Excel</button>
+        <div class="stats-badge" id="statsInfo">
+            ⚡ 等待分组
+        </div>
+    </div>
+
+    <!-- 错误 / 提示 区域 -->
+    <div id="errorMsg"></div>
+
+    <!-- 分组结果展示区 -->
+    <div id="resultContainer" class="result-grid">
+        <!-- 动态渲染分组卡片 -->
+    </div>
+
+    <footer>
+        ⚖️ 平均分配 · 每次随机打乱 · 名单留空则自动生成 1 ~ N 编号 · 支持Excel导入/导出
+    </footer>
+</div>
+
+<script>
+    (function() {
+        // DOM 元素
+        const totalPeopleInput = document.getElementById('totalPeople');
+        const groupCountInput = document.getElementById('groupCount');
+        const nameListTextarea = document.getElementById('nameList');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const statsInfo = document.getElementById('statsInfo');
+        const errorDiv = document.getElementById('errorMsg');
+        const resultContainer = document.getElementById('resultContainer');
+
+        // Excel 相关元素
+        const excelFileInput = document.getElementById('excelFile');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const headerCheckbox = document.getElementById('headerCheckbox');
+        const appendCheckbox = document.getElementById('appendCheckbox');
+        const importExcelBtn = document.getElementById('importExcelBtn');
+        const importStatus = document.getElementById('importStatus');
+
+        // 新增：导出按钮
+        const exportBtn = document.getElementById('exportBtn');
+
+        // 存储最近一次分组结果 (用于导出)
+        let lastGroups = null;
+
+        // 工具函数： Fisher-Yates 洗牌
+        function shuffleArray(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // 核心：根据人员数组与组数，生成均匀分组 (二维数组)
+        function createBalancedGroups(peopleArray, groupCount) {
+            const total = peopleArray.length;
+            if (groupCount > total) {
+                throw new Error(`组数 (${groupCount}) 不能大于总人数 (${total})`);
+            }
+            if (groupCount <= 0) {
+                throw new Error('组数必须大于0');
+            }
+
+            const shuffled = shuffleArray(peopleArray);
+            const baseSize = Math.floor(total / groupCount);
+            const remainder = total % groupCount;
+
+            const groups = [];
+            let start = 0;
+
+            for (let i = 0; i < groupCount; i++) {
+                const currentSize = i < remainder ? baseSize + 1 : baseSize;
+                groups.push(shuffled.slice(start, start + currentSize));
+                start += currentSize;
+            }
+
+            // 防御性检测 (极少情况)
+            if (start !== total) {
+                console.warn('分组索引异常，重新修正');
+                const extra = Array.from({ length: total }, (_, i) => peopleArray[i]);
+                const shuffledFallback = shuffleArray(extra);
+                let idx = 0;
+                const fallbackGroups = [];
+                for (let i = 0; i < groupCount; i++) {
+                    const size = i < remainder ? baseSize + 1 : baseSize;
+                    fallbackGroups.push(shuffledFallback.slice(idx, idx + size));
+                    idx += size;
+                }
+                return fallbackGroups;
+            }
+
+            return groups;
+        }
+
+        // 解析姓名列表 (按行，去空，trim)
+        function parseNameList(text) {
+            if (!text || text.trim() === '') {
+                return [];
+            }
+            const lines = text.split(/\r?\n/);
+            return lines
+                .map(line => line.trim())
+                .filter(name => name !== '');
+        }
+
+        // 更新界面: 渲染分组
+        function renderGroups(groups) {
+            resultContainer.innerHTML = '';
+
+            if (!groups || groups.length === 0) {
+                resultContainer.innerHTML = '<div class="empty-groups-note">暂无分组，请调整输入后重试</div>';
+                return;
+            }
+
+            groups.forEach((members, idx) => {
+                const groupCard = document.createElement('div');
+                groupCard.className = 'group-card';
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'group-header';
+                headerDiv.innerHTML = `
+                    <span class="group-title">第 ${idx + 1} 组</span>
+                    <span class="group-count">${members.length} 人</span>
+                `;
+
+                const memberListDiv = document.createElement('div');
+                memberListDiv.className = 'member-list';
+
+                members.forEach(member => {
+                    const badge = document.createElement('span');
+                    badge.className = 'member-badge';
+                    badge.textContent = member;
+                    memberListDiv.appendChild(badge);
+                });
+
+                groupCard.appendChild(headerDiv);
+                groupCard.appendChild(memberListDiv);
+                resultContainer.appendChild(groupCard);
+            });
+        }
+
+        // 主要分组逻辑
+        function performGrouping() {
+            errorDiv.innerHTML = '';
+
+            const rawNameText = nameListTextarea.value;
+            const nameArray = parseNameList(rawNameText);
+            let peopleArray = [];
+
+            if (nameArray.length > 0) {
+                peopleArray = nameArray;
+            } else {
+                const peopleNum = parseInt(totalPeopleInput.value, 10);
+                if (isNaN(peopleNum) || peopleNum < 1) {
+                    errorDiv.innerHTML = '❌ 请填写有效的人数 (至少1人) 或输入姓名列表';
+                    statsInfo.innerHTML = '⚠️ 人数无效';
+                    resultContainer.innerHTML = '<div class="empty-groups-note">等待有效输入</div>';
+                    return;
+                }
+                peopleArray = Array.from({ length: peopleNum }, (_, i) => (i + 1).toString());
+            }
+
+            let groupCount = parseInt(groupCountInput.value, 10);
+            if (isNaN(groupCount) || groupCount < 1) {
+                errorDiv.innerHTML = '⚠️ 分组数必须为大于0的整数，已自动设为1';
+                groupCount = 1;
+                groupCountInput.value = 1;
+            }
+
+            if (groupCount > peopleArray.length) {
+                errorDiv.innerHTML = `❌ 分组数 (${groupCount}) 不能大于总人数 (${peopleArray.length})，请调整组数或增加人数`;
+                statsInfo.innerHTML = `👥 共 ${peopleArray.length} 人 | 组数 ${groupCount} ❌`;
+                resultContainer.innerHTML = '<div class="empty-groups-note">⛔ 组数超过人数，无法平均分组</div>';
+                return;
+            }
+
+            try {
+                const groups = createBalancedGroups(peopleArray, groupCount);
+                // 保存到全局变量以便导出
+                lastGroups = groups;
+                statsInfo.innerHTML = `👥 总人数 <span>${peopleArray.length}</span>  · 组数 <span>${groupCount}</span>  · 每组 ${Math.floor(peopleArray.length/groupCount)}~${Math.ceil(peopleArray.length/groupCount)} 人`;
+                renderGroups(groups);
+            } catch (e) {
+                errorDiv.innerHTML = `❌ ${e.message}`;
+                statsInfo.innerHTML = '⚠️ 分组失败';
+                console.error(e);
+            }
+        }
+
+        // ========== Excel 导入功能 (保持不变) ==========
+        excelFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                importStatus.textContent = '';
+            } else {
+                fileNameDisplay.textContent = '未选择文件';
+            }
+        });
+
+        importExcelBtn.addEventListener('click', function() {
+            const file = excelFileInput.files[0];
+            if (!file) {
+                importStatus.textContent = '⚠️ 请先选择文件';
+                importStatus.style.color = '#b13e3e';
+                return;
+            }
+
+            importStatus.textContent = '⏳ 读取中...';
+            importStatus.style.color = '#2f6b3e';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+
+                    let rows = [];
+                    if (headerCheckbox.checked) {
+                        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        if (jsonRows.length <= 1) {
+                            importStatus.textContent = '⚠️ Excel 只有标题行或无数据';
+                            return;
+                        }
+                        for (let i = 1; i < jsonRows.length; i++) {
+                            const row = jsonRows[i];
+                            if (row && row.length > 0 && row[0] !== undefined && row[0] !== null && row[0].toString().trim() !== '') {
+                                rows.push(row[0].toString().trim());
+                            }
+                        }
+                    } else {
+                        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        for (let i = 0; i < jsonRows.length; i++) {
+                            const row = jsonRows[i];
+                            if (row && row.length > 0 && row[0] !== undefined && row[0] !== null && row[0].toString().trim() !== '') {
+                                rows.push(row[0].toString().trim());
+                            }
+                        }
+                    }
+
+                    if (rows.length === 0) {
+                        importStatus.textContent = '⚠️ 未在第一列找到姓名数据';
+                        return;
+                    }
+
+                    const currentText = nameListTextarea.value;
+                    const currentLines = parseNameList(currentText);
+                    let newText = '';
+
+                    if (appendCheckbox.checked) {
+                        const combined = [...currentLines, ...rows];
+                        newText = combined.join('\n');
+                    } else {
+                        newText = rows.join('\n');
+                    }
+
+                    nameListTextarea.value = newText;
+                    importStatus.textContent = `✅ 成功导入 ${rows.length} 个姓名${appendCheckbox.checked ? ' (追加)' : ''}`;
+                    importStatus.style.color = '#2f6b3e';
+
+                    if (parseNameList(newText).length > 0) {
+                        statsInfo.innerHTML = `📋 姓名模式 · ${parseNameList(newText).length} 人`;
+                    } else {
+                        statsInfo.innerHTML = `⚡ 等待输入`;
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    importStatus.textContent = '❌ 解析失败，请检查文件格式';
+                    importStatus.style.color = '#b13e3e';
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        // ========== 新增：导出分组结果为 Excel ==========
+        function exportGroupsToExcel() {
+            if (!lastGroups || lastGroups.length === 0) {
+                errorDiv.innerHTML = '⚠️ 没有可导出的分组结果，请先进行一次分组。';
+                return;
+            }
+
+            // 构建二维数组：第一行标题 ["组别", "姓名"]
+            const data = [["组别", "姓名"]];
+            lastGroups.forEach((group, idx) => {
+                const groupName = `第${idx + 1}组`;
+                group.forEach(member => {
+                    data.push([groupName, member]);
+                });
+            });
+
+            // 使用 XLSX 创建 worksheet 和 workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, "分组结果");
+            // 导出文件
+            XLSX.writeFile(wb, "分组结果.xlsx");
+        }
+
+        exportBtn.addEventListener('click', exportGroupsToExcel);
+
+        // 监听输入变化以更新预览统计
+        nameListTextarea.addEventListener('input', function() {
+            const names = parseNameList(this.value);
+            if (names.length > 0) {
+                statsInfo.innerHTML = `📋 姓名模式 · ${names.length} 人`;
+            } else {
+                const peopleNum = parseInt(totalPeopleInput.value, 10);
+                if (!isNaN(peopleNum) && peopleNum > 0) {
+                    statsInfo.innerHTML = `🔢 编号模式 · ${peopleNum} 人`;
+                } else {
+                    statsInfo.innerHTML = `⚡ 等待输入`;
+                }
+            }
+        });
+
+        totalPeopleInput.addEventListener('input', function() {
+            if (nameListTextarea.value.trim() === '') {
+                const num = parseInt(this.value, 10);
+                if (!isNaN(num) && num > 0) {
+                    statsInfo.innerHTML = `🔢 编号模式 · ${num} 人`;
+                } else {
+                    statsInfo.innerHTML = `⚡ 人数无效`;
+                }
+            }
+        });
+
+        // 页面加载后默认执行一次分组
+        window.addEventListener('load', () => {
+            performGrouping();
+        });
+
+        // 绑定分组按钮
+        shuffleBtn.addEventListener('click', performGrouping);
+    })();
+</script>
+</body>
+</html>
